@@ -78,11 +78,14 @@ export const FeedPostItem: React.FC<FeedPostItemProps> = ({
           )}
           <button
             type="button"
-            onClick={() => showToast('原型：留言功能尚未開放')}
-            aria-label="留言"
+            onClick={() => {
+              try { sessionStorage.setItem('prefill_company', post.co[0]); } catch {}
+              window.location.hash = '#community';
+            }}
+            aria-label="去討論"
           >
             <ChatIcon />
-            留言
+            去討論
           </button>
           <button type="button" onClick={handleShare} aria-label="分享">
             <ShareIcon />

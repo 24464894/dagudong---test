@@ -102,35 +102,64 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     if (showExamplePreview) setShowExamplePreview(false);
   };
 
+  const [expandedBlocks, setExpandedBlocks] = useState<Record<string, boolean>>({});
+
+  const toggleBlock = (title: string) => {
+    setExpandedBlocks((prev) => ({ ...prev, [title]: !prev[title] }));
+  };
+
   const renderDiffBlock = (
     title: string,
     items: [string, string, string][],
     color?: string
-  ) => (
-    <div>
-      <h3>
-        <span>{title}</span>
-        <span className="mono muted">{items.length}</span>
-      </h3>
-      <ul>
-        {items.length > 0 ? (
-          items.slice(0, 6).map(([c, n, v]) => (
-            <li key={c + v}>
-              <a href={`#co-${c}`}>
-                {n} <span className="mono muted" style={{ fontWeight: 400 }}>{c}</span>
-              </a>
-              <span className="mono" style={{ color: color || 'var(--ink)' }}>
-                {v}
-              </span>
+  ) => {
+    const isExpanded = expandedBlocks[title];
+    const displayedItems = isExpanded ? items : items.slice(0, 6);
+
+    return (
+      <div>
+        <h3>
+          <span>{title}</span>
+          <span className="mono muted">{items.length}</span>
+        </h3>
+        <ul>
+          {items.length > 0 ? (
+            displayedItems.map(([c, n, v], idx) => (
+              <li key={c + v + idx}>
+                <button
+                  type="button"
+                  className="ht"
+                  style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                  onClick={() => {
+                    onSelectEvent?.({
+                      code: c,
+                      kind: title === '大股東申報賣股' ? 'insider' : title === '新的處置' ? 'disposal' : title === '這週多押千張以上' ? 'pledgeUp' : 'fined',
+                      date: '',
+                    });
+                  }}
+                >
+                  {n}
+                </button>
+                <a href={`#co-${c}`} className="mono muted" style={{ fontWeight: 400, marginLeft: 6 }}>{c}</a>
+                <span className="mono" style={{ color: color || 'var(--ink)', marginLeft: 6 }}>
+                  {v}
+                </span>
+              </li>
+            ))
+          ) : (
+            <li className="muted">沒有</li>
+          )}
+          {items.length > 6 && (
+            <li>
+              <button type="button" className="ht" onClick={() => toggleBlock(title)}>
+                {isExpanded ? '收合' : `還有 ${items.length - 6} 筆`}
+              </button>
             </li>
-          ))
-        ) : (
-          <li className="muted">沒有</li>
-        )}
-        {items.length > 6 && <li className="muted">還有 {items.length - 6} 筆</li>}
-      </ul>
-    </div>
-  );
+          )}
+        </ul>
+      </div>
+    );
+  };
 
   const legendElement = (
     <div className="legend">

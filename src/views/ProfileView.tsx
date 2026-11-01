@@ -390,7 +390,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 style={{ width: 18, height: 18, cursor: 'pointer' }}
               />
               <div>
-                <b>Email 每日早報</b>
+                <b>Email 每日早報</b> <span className="tag">即將開放</span>
                 <div className="note">每天開盤前整理你追蹤公司的最新重大異動</div>
               </div>
             </label>
@@ -507,12 +507,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </ul>
               <button
                 type="button"
-                className="btn hl"
+                className="btn line"
                 style={{ width: '100%' }}
-                onClick={() => showToast('原型：付費功能即將推出')}
+                disabled
               >
-                升級 PRO（即將推出）
+                即將推出
               </button>
+              <div className="note" style={{ marginTop: 10 }}>想第一個知道？開啟 Email 通知，推出時會通知你</div>
             </div>
           </div>
         </section>

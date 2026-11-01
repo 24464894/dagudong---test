@@ -105,7 +105,7 @@ export const DailyView: React.FC<DailyViewProps> = ({
     try {
       sessionStorage.setItem('prefill_company', item.c);
     } catch {}
-    window.location.hash = '#feed';
+    window.location.hash = '#community';
   };
 
   useEffect(() => {

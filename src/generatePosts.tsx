@@ -1,6 +1,7 @@
 import { Dataset, FeedPost, DailyItem } from './types';
 import { SIG, CLAUSE_MAP, ORDER } from './constants';
 import { zhang, md, short } from './utils';
+import { ExpandableList } from './components/ExpandableList';
 
 export function generatePosts(data: Dataset, dailyItems: DailyItem[] = []): FeedPost[] {
   const posts: FeedPost[] = [];
@@ -253,22 +254,17 @@ export function generatePosts(data: Dataset, dailyItems: DailyItem[] = []): Feed
         .join(' ')}`,
       att: (
         <div className="att p">
-          <div className="lst">
-            {data.disp.slice(0, 5).map((e, idx) => (
+          <ExpandableList
+            items={data.disp}
+            renderItem={(e, idx) => (
               <div key={idx}>
                 <span>{e.n}</span>
                 <span className="mono muted">
                   {md(e.from)}～{md(e.to)}
                 </span>
               </div>
-            ))}
-            {data.disp.length > 5 && (
-              <div>
-                <span className="muted">還有 {data.disp.length - 5} 檔</span>
-                <span />
-              </div>
             )}
-          </div>
+          />
         </div>
       ),
     });
