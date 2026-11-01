@@ -4,7 +4,7 @@ import { Dataset, FeedPost, Company } from '../types';
 import { SIG } from '../constants';
 import { useToast } from '../components/Toast';
 import { FeedPostItem } from '../components/FeedPostItem';
-import { IND, downloadCSV } from '../utils';
+import { downloadCSV, buildCompanyRecords } from '../utils';
 
 interface ProfileViewProps {
   data: Dataset;
@@ -141,16 +141,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const userSavedPosts = allPosts.filter((p) => savedPosts.includes(p.id));
 
   const handleDownloadWatchlist = () => {
-    const headers = ['代號', '名稱', '市場', '產業', '董監質押%', '累積訊號數'];
-    const rows = trackedCompanies.map((c) => [
-      c.c,
-      c.n,
-      c.m,
-      IND(c),
-      c.p != null ? `${c.p.toFixed(2)}%` : '—',
-      String(c.k.length),
-    ]);
-    downloadCSV(`我的追蹤清單_${new Date().toISOString().slice(0, 10)}.csv`, [headers, ...rows]);
+    const headers = ['代號', '公司', '市場', '種類', '日期', '摘要', '金額或張數', '原文', '資料來源'];
+    const allRows: string[][] = [];
+
+    if (!profile) return;
+    profile.watchlist.forEach((code) => {
+      const rows = buildCompanyRecords(code, data);
+      allRows.push(...rows);
+    });
+
+    // Sort by code first, then by date descending
+    allRows.sort((a, b) => {
+      const codeDiff = a[0].localeCompare(b[0]);
+      if (codeDiff !== 0) return codeDiff;
+      return b[4].localeCompare(a[4]);
+    });
+
+    downloadCSV(
+      `我的追蹤清單紀錄_${new Date().toISOString().slice(0, 10)}.csv`,
+      [headers, ...allRows]
+    );
   };
 
   if (!user || !profile) {

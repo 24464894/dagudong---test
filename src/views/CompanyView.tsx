@@ -9,6 +9,7 @@ import {
   getCompanyEvents,
   zhang,
   downloadCSV,
+  buildCompanyRecords,
 } from '../utils';
 import { FeedPostItem } from '../components/FeedPostItem';
 import { CommunityFeed } from '../components/CommunityFeed';
@@ -176,9 +177,9 @@ export const CompanyView: React.FC<CompanyViewProps> = ({
   };
 
   const handleDownload = () => {
-    const headers = ['日期', '種類', '內容'];
-    const rows = events.map((e) => [e.d, KIND[e.k]?.[0] || e.k, e.x]);
-    downloadCSV(`${code}_${company.n}_訊號紀錄.csv`, [headers, ...rows]);
+    const headers = ['代號', '公司', '市場', '種類', '日期', '摘要', '金額或張數', '原文', '資料來源'];
+    const rows = buildCompanyRecords(code, data);
+    downloadCSV(`${code}_${company.n}_歷史紀錄.csv`, [headers, ...rows]);
   };
 
   return (
@@ -235,7 +236,13 @@ export const CompanyView: React.FC<CompanyViewProps> = ({
       {diffItem && (
         <div className="warn" style={{ margin: '14px 24px 0' }}>
           跟昨天比：多了 {diffItem.new?.length || 0} 個訊號
-          {diffItem.p && `（質押比率異動）`}
+          {diffItem.p && (
+            <>
+              {diffItem.p[0] !== null && diffItem.p[1] !== null
+                ? `（質押比率 ${diffItem.p[0].toFixed(1)}% → ${diffItem.p[1].toFixed(1)}%）`
+                : `（開始/不再列入董監質押統計）`}
+            </>
+          )}
         </div>
       )}
 

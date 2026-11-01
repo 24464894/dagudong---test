@@ -142,8 +142,133 @@ export function getCompanyEvents(code: string, data: Dataset): TimelineEvent[] {
   return events.sort((a, b) => b.d.localeCompare(a.d));
 }
 
+export function buildCompanyRecords(code: string, data: Dataset): string[][] {
+  const c = data.cos.find((item) => item.c === code);
+  if (!c) return [];
+  const rows: string[][] = [];
+  const { c: codeStr, n: nameStr, m: marketStr } = c;
+
+  // Fines
+  data.fines
+    .filter((f) => f.c === code)
+    .forEach((f) => {
+      rows.push([
+        codeStr,
+        nameStr,
+        marketStr,
+        '裁罰',
+        f.d,
+        f.src,
+        f.amt ? f.amt + ' 萬元' : '',
+        f.why + (f.raw ? ' ' + f.raw : ''),
+        f.src,
+      ]);
+    });
+
+  // Control
+  data.control
+    .filter((e) => e.c === code)
+    .forEach((e) => {
+      rows.push([
+        codeStr,
+        nameStr,
+        marketStr,
+        '經營權異動',
+        e.d,
+        e.t,
+        '',
+        e.x,
+        '證交所／櫃買中心 經營權異動公告',
+      ]);
+    });
+
+  // Insider
+  data.insider
+    .filter((e) => e.c === code)
+    .forEach((e) => {
+      rows.push([
+        codeStr,
+        nameStr,
+        marketStr,
+        '內部人申報',
+        e.d,
+        e.who + e.name + e.how,
+        zhang(e.sell) + ' 張',
+        e.period + ' 目前持有 ' + e.hold,
+        '公開資訊觀測站 內部人持股轉讓事前申報',
+      ]);
+    });
+
+  // Disposal
+  data.disp
+    .filter((e) => e.c === code)
+    .forEach((e) => {
+      rows.push([
+        codeStr,
+        nameStr,
+        marketStr,
+        '處置',
+        e.d,
+        e.from + '～' + e.to,
+        '',
+        e.why,
+        '證交所／櫃買中心',
+      ]);
+    });
+
+  // Trade
+  data.trade
+    .filter((t) => t.c === code)
+    .forEach((t) => {
+      rows.push([
+        codeStr,
+        nameStr,
+        marketStr,
+        '交易方式變更',
+        data.today,
+        t.k,
+        '',
+        '',
+        '證交所／櫃買中心',
+      ]);
+    });
+
+  // Weekly (pledgeUp)
+  const w = data.weekly.find((x) => x.c === code);
+  if (w && Math.abs(w.dv) >= 1e6) {
+    rows.push([
+      codeStr,
+      nameStr,
+      marketStr,
+      w.dv > 0 ? '大額質押增加' : '大額質押減少',
+      data.weekDate,
+      '本週設質變動',
+      zhang(w.dv) + ' 張',
+      (w.r != null ? '增減 ' + w.r + '%' : '') + (w.i != null ? ' 累計 ' + w.i + '%' : ''),
+      '集保結算所 設質交付週統計',
+    ]);
+  }
+
+  // Pledge percentage (pledgeHigh)
+  if (c.p != null) {
+    rows.push([
+      codeStr,
+      nameStr,
+      marketStr,
+      '董監質押比率',
+      data.pledgeDate,
+      '質押比率 ' + c.p + '%',
+      '',
+      '',
+      '公開資訊觀測站 董監質權設定',
+    ]);
+  }
+
+  return rows.sort((a, b) => b[4].localeCompare(a[4]));
+}
+
 export function downloadCSV(filename: string, rows: string[][]) {
-  const footer = `\n資料來源：大股東在幹嘛,政府公開資料\n產出日期：${new Date().toLocaleDateString('zh-TW')}`;
+  const footer = `\n資料來源：政府資料開放平臺。本站只整理公開資訊，不提供買賣建議。\n產出日期：${new Date().toLocaleDateString('zh-TW')} ${new Date().toLocaleTimeString('zh-TW')}`;
   const csvContent = rows
     .map((row) =>
       row

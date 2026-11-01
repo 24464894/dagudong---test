@@ -449,7 +449,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {activeTab === 'yesterday' ? (
           <div>
             <p className="note" style={{ marginBottom: 16 }}>
-              {diff ? (diff.prev ? `${diff.prev} → ${diff.date}` : `${diff.date}`) : '載入中...'}
+              {diff ? (diff.prev ? `${diff.prev} → ${diff.today}` : `${diff.today}`) : '載入中...'}
             </p>
 
             {!diff?.prev && (
@@ -471,21 +471,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flex: 1, justifyContent: 'flex-end' }}>
                         {i.new?.map((s) => (
                           <button
-                            key={s.k}
+                            key={s.k + s.d + s.x}
                             type="button"
                             className="tag hi"
                             style={{ cursor: 'pointer', border: 0 }}
-                            onClick={() => onSelectEvent?.({ code: i.c, kind: s.k as any, date: '' })}
+                            onClick={() => onSelectEvent?.({ code: i.c, kind: s.k as any, date: s.d })}
                           >
                             {s.x}
                           </button>
                         ))}
                         {i.gone?.map((s) => (
-                          <span key={s} className="muted" style={{ fontSize: 13 }}>已結束：{s}</span>
+                          <span key={s.k + s.d} className="muted" style={{ fontSize: 13 }}>
+                            已結束：{s.x}
+                          </span>
                         ))}
                         {i.p && (
                           <span className="note">
-                            董監質押 {i.p.from.toFixed(1)}% → {i.p.to.toFixed(1)}%
+                            {i.p[0] !== null && i.p[1] !== null ? (
+                              `董監質押 ${i.p[0].toFixed(1)}% → ${i.p[1].toFixed(1)}%`
+                            ) : (
+                              '開始/不再列入董監質押統計'
+                            )}
                           </span>
                         )}
                       </div>
@@ -518,7 +524,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <a href={`#co-${i.c}`} className="ht">{i.n}</a>
                         <span className="mono muted" style={{ fontSize: 12 }}>{i.c}</span>
-                        {i.new?.some(s => s.k === 'chain') && <span className="tag hi">新增連環訊號</span>}
+                        {i.chain === true && <span className="tag hi">新增連環訊號</span>}
                       </div>
                       <div style={{ display: 'flex', gap: 4 }}>
                         {i.new?.filter(s => s.k !== 'chain').map(s => (

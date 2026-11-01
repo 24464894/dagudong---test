@@ -241,18 +241,25 @@ export interface DailyContent {
   items: DailyItem[];
 }
 
+export interface DiffSignal {
+  k: string;
+  d: string;
+  x: string;
+}
+
 export interface DiffItem {
   c: string;
   n: string;
   m: string;
-  new?: { k: string, x: string }[];
-  gone?: string[];
-  p?: { from: number, to: number };
+  new?: DiffSignal[];
+  gone?: DiffSignal[];
+  p?: [number | null, number | null];
+  chain?: boolean;
 }
 
 export interface DiffData {
-  date: string;
+  today: string;
   prev: string | null;
-  items: DiffItem[];
   summary: Record<string, number>;
+  items: DiffItem[];
 }
