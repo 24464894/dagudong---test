@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with watchlist, saved posts, notification preferences and plan",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email", "description": "User email" },
+        "displayName": { "type": "string", "maxLength": 100, "description": "Display name" },
+        "photoURL": { "type": "string", "maxLength": 500, "description": "Avatar URL" },
+        "watchlist": { "type": "array", "description": "List of tracked stock codes" },
+        "saved": { "type": "array", "description": "List of saved post IDs" },
+        "notify": { "type": "boolean", "description": "Notification preference toggle" },
+        "plan": { "type": "string", "enum": ["free", "pro"], "description": "Subscription tier" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "User discussion post in the community forum",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string", "description": "UID of the author" },
+        "authorName": { "type": "string", "maxLength": 100, "description": "Name of the author" },
+        "authorPhoto": { "type": "string", "maxLength": 500, "description": "Author avatar URL" },
+        "companyCode": { "type": "string", "maxLength": 20, "description": "Optional associated stock code" },
+        "companyName": { "type": "string", "maxLength": 50, "description": "Optional associated stock name" },
+        "content": { "type": "string", "minLength": 1, "maxLength": 2000, "description": "Post body text" },
+        "official": { "type": "boolean", "description": "Official post mark only editable by admin" },
+        "hidden": { "type": "boolean", "description": "Moderation flag only editable by admin" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Created at timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Updated at timestamp" }
+      },
+      "required": ["authorId", "content", "createdAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "User comment under a discussion post",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string", "description": "UID of comment author" },
+        "authorName": { "type": "string", "maxLength": 100, "description": "Author display name" },
+        "authorPhoto": { "type": "string", "maxLength": 500, "description": "Author avatar URL" },
+        "content": { "type": "string", "minLength": 1, "maxLength": 1000, "description": "Comment content" },
+        "hidden": { "type": "boolean", "description": "Moderation flag only editable by admin" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Created at timestamp" }
+      },
+      "required": ["authorId", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile with private settings and watchlists"
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Public community discussion posts"
+    },
+    "/posts/{postId}/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Comments under a community post"
+    }
+  }
+}

@@ -1,0 +1,203 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email == 'smpss96219@gmail.com' &&
+        request.auth.token.email_verified == true;
+    }
+
+    function isNotBanned() {
+      return isSignedIn() &&
+        !exists(/databases/$(database)/documents/bans/$(request.auth.uid)) &&
+        (!exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('banned', false) != true);
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Connection test document
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // bans/{userId}
+    match /bans/{userId} {
+      allow read, write: if isAdmin();
+    }
+
+    // users/{userId}
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && (!('plan' in incoming()) || incoming().plan == 'free') && (!('banned' in incoming()) || incoming().banned == false);
+      allow update: if isAdmin() || (isOwner(userId) && !incoming().diff(existing()).affectedKeys().hasAny(['plan', 'role', 'banned']));
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // posts/{postId}
+    match /posts/{postId} {
+      allow read: if (existing().get('hidden', false) != true && existing().get('reportCount', 0) < 3) || (isSignedIn() && (existing().authorId == request.auth.uid || isAdmin()));
+
+      allow create: if isNotBanned() &&
+        incoming().authorId == request.auth.uid &&
+        incoming().content is string &&
+        incoming().content.size() >= 5 &&
+        incoming().content.size() <= 500 &&
+        incoming().createdAt == request.time &&
+        incoming().get('likeCount', 0) == 0 &&
+        incoming().get('commentCount', 0) == 0 &&
+        incoming().get('reportCount', 0) == 0 &&
+        incoming().get('hidden', false) == false &&
+        (isAdmin() || incoming().authorName != '大股東在幹嘛') &&
+        (!('official' in incoming()) || incoming().official == false || isAdmin()) &&
+        (incoming().get('postType', '心得分享') in ['心得分享', '提問', '資料解讀', '新聞討論']) &&
+        (incoming().get('companyCodes', []).size() <= 3);
+
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (existing().authorId == request.auth.uid && isNotBanned() &&
+          incoming().authorId == existing().authorId &&
+          incoming().get('official', false) == existing().get('official', false) &&
+          incoming().get('hidden', false) == existing().get('hidden', false) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['content', 'companyCode', 'companyName', 'companyCodes', 'postType', 'editedAt', 'updatedAt'])
+        ) ||
+        (isNotBanned() && incoming().diff(existing()).affectedKeys().hasOnly(['likeCount']) && (
+          (incoming().likeCount == existing().likeCount + 1 &&
+           !exists(/databases/$(database)/documents/posts/$(postId)/likes/$(request.auth.uid)) &&
+           existsAfter(/databases/$(database)/documents/posts/$(postId)/likes/$(request.auth.uid))) ||
+          (incoming().likeCount == existing().likeCount - 1 &&
+           exists(/databases/$(database)/documents/posts/$(postId)/likes/$(request.auth.uid)) &&
+           !existsAfter(/databases/$(database)/documents/posts/$(postId)/likes/$(request.auth.uid)))
+        )) ||
+        (isNotBanned() && incoming().diff(existing()).affectedKeys().hasOnly(['reportCount']) &&
+          incoming().reportCount == existing().get('reportCount', 0) + 1 &&
+          existsAfter(/databases/$(database)/documents/posts/$(postId)/reports/$(request.auth.uid)) &&
+          !exists(/databases/$(database)/documents/posts/$(postId)/reports/$(request.auth.uid))
+        ) ||
+        (isNotBanned() && incoming().diff(existing()).affectedKeys().hasOnly(['commentCount']) && (
+          incoming().commentCount == existing().commentCount + 1 ||
+          incoming().commentCount == existing().commentCount - 1
+        ))
+      );
+
+      allow delete: if isSignedIn() && (existing().authorId == request.auth.uid || isAdmin());
+
+      // comments under posts
+      match /comments/{commentId} {
+        allow read: if (resource.data.get('hidden', false) != true && resource.data.get('reportCount', 0) < 3) || (isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin()));
+
+        allow create: if isNotBanned() &&
+          incoming().authorId == request.auth.uid &&
+          incoming().content is string &&
+          incoming().content.size() <= 500 &&
+          incoming().createdAt == request.time &&
+          (!('hidden' in incoming()) || incoming().hidden == false || isAdmin());
+
+        allow update: if isSignedIn() && (
+          isAdmin() ||
+          (existing().authorId == request.auth.uid && isNotBanned() && incoming().authorId == existing().authorId && incoming().get('hidden', false) == existing().get('hidden', false) && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'editedAt', 'updatedAt'])) ||
+          (isNotBanned() && incoming().diff(existing()).affectedKeys().hasOnly(['reportCount']) &&
+            incoming().reportCount == existing().get('reportCount', 0) + 1 &&
+            existsAfter(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId)/reports/$(request.auth.uid)) &&
+            !exists(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId)/reports/$(request.auth.uid))
+          )
+        );
+
+        allow delete: if isSignedIn() && (existing().authorId == request.auth.uid || isAdmin());
+
+        // reports/{uid} under comments
+        match /reports/{uid} {
+          allow read: if isAdmin();
+          allow create: if isNotBanned() && isOwner(uid);
+          allow delete: if isAdmin();
+        }
+      }
+
+      // likes/{uid}
+      match /likes/{uid} {
+        allow read: if isSignedIn();
+        allow create: if isNotBanned() && isOwner(uid) &&
+          getAfter(/databases/$(database)/documents/posts/$(postId)).data.likeCount == get(/databases/$(database)/documents/posts/$(postId)).data.get('likeCount', 0) + 1;
+        allow delete: if isNotBanned() && isOwner(uid) &&
+          getAfter(/databases/$(database)/documents/posts/$(postId)).data.likeCount == get(/databases/$(database)/documents/posts/$(postId)).data.get('likeCount', 0) - 1;
+      }
+
+      // reports/{uid}
+      match /reports/{uid} {
+        allow read: if isAdmin();
+        allow create: if isNotBanned() && isOwner(uid);
+        allow delete: if isAdmin();
+      }
+    }
+
+    // feedback/{feedbackId}
+    match /feedback/{feedbackId} {
+      allow read: if isAdmin();
+      allow create: if isNotBanned() && incoming().uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // profiles/{userId}
+    match /profiles/{userId} {
+      allow read: if true;
+      allow create: if isNotBanned() && isOwner(userId) &&
+        incoming().keys().hasOnly(['name', 'photo', 'bio', 'joinedAt', 'showWatchlist', 'watchlist', 'postCount', 'likeCount']) &&
+        incoming().name is string && incoming().name.size() >= 1 && incoming().name.size() <= 30 &&
+        (isAdmin() || incoming().name != '大股東在幹嘛') &&
+        incoming().get('bio', '') is string && incoming().get('bio', '').size() <= 60 &&
+        incoming().get('watchlist', []) is list && incoming().get('watchlist', []).size() <= 50 &&
+        (!('postCount' in incoming()) || incoming().postCount == 0) &&
+        (!('likeCount' in incoming()) || incoming().likeCount == 0);
+
+      allow update: if isAdmin() || (
+        isNotBanned() && isOwner(userId) &&
+        incoming().keys().hasOnly(['name', 'photo', 'bio', 'joinedAt', 'showWatchlist', 'watchlist', 'postCount', 'likeCount']) &&
+        incoming().name is string && incoming().name.size() >= 1 && incoming().name.size() <= 30 &&
+        (isAdmin() || incoming().name != '大股東在幹嘛') &&
+        incoming().get('bio', '') is string && incoming().get('bio', '').size() <= 60 &&
+        incoming().get('watchlist', []) is list && incoming().get('watchlist', []).size() <= 50 &&
+        incoming().get('postCount', 0) == existing().get('postCount', 0) &&
+        incoming().get('likeCount', 0) == existing().get('likeCount', 0)
+      );
+
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // userReports/{reportId}
+    match /userReports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isNotBanned() &&
+        reportId == incoming().targetUid + '_' + request.auth.uid &&
+        incoming().targetUid != request.auth.uid &&
+        incoming().reporterUid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // CollectionGroup rule for comments
+    match /{path=**}/comments/{commentId} {
+      allow read: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+  }
+}
