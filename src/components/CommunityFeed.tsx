@@ -83,15 +83,31 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({ data, filterCompan
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Check for prefilled hashtag or quote content from daily report
+  // Check for prefilled company tag or hashtag from daily report / event panel
   useEffect(() => {
-    try {
-      const prefill = sessionStorage.getItem('prefill_discuss');
-      if (prefill) {
-        setContent((prev) => (prev ? `${prefill} ${prev}` : `${prefill} `));
-        sessionStorage.removeItem('prefill_discuss');
-      }
-    } catch {}
+    const checkPrefill = () => {
+      try {
+        const prefillCo = sessionStorage.getItem('prefill_company');
+        if (prefillCo) {
+          setSelectedCompanies((prev) => {
+            if (!prev.includes(prefillCo) && prev.length < 3) {
+              return [...prev, prefillCo];
+            }
+            return prev;
+          });
+          sessionStorage.removeItem('prefill_company');
+        }
+        const prefill = sessionStorage.getItem('prefill_discuss');
+        if (prefill) {
+          setContent((prev) => (prev ? `${prefill} ${prev}` : `${prefill} `));
+          sessionStorage.removeItem('prefill_discuss');
+        }
+      } catch {}
+    };
+
+    checkPrefill();
+    window.addEventListener('hashchange', checkPrefill);
+    return () => window.removeEventListener('hashchange', checkPrefill);
   }, []);
 
   // Close company dropdown when clicking outside

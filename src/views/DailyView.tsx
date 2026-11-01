@@ -103,9 +103,9 @@ export const DailyView: React.FC<DailyViewProps> = ({
 
   const handleGoDiscuss = (item: DailyItem) => {
     try {
-      sessionStorage.setItem('prefill_discuss', `#${item.n}`);
+      sessionStorage.setItem('prefill_company', item.c);
     } catch {}
-    window.location.hash = '#community';
+    window.location.hash = '#feed';
   };
 
   useEffect(() => {

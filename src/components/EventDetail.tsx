@@ -93,8 +93,11 @@ export const EventDetail: React.FC<EventDetailProps> = ({
     tagText = '大股東申報賣股';
     tagClass = 'tag hi';
     summaryTitle = `${coName} (${target.code}) · 內部人${match?.name ? match.name : ''}事前申報轉讓`;
+    const holdPct = match && match.hold ? ((match.sell / match.hold) * 100).toFixed(1) : null;
     statCards = [
       { label: '申報賣出', value: match ? `${zhang(match.sell)} 張` : '—' },
+      { label: '目前持有', value: match ? `${zhang(match.hold)} 張` : '—' },
+      { label: '占持股', value: holdPct ? `${holdPct}%` : '—' },
       { label: '申報人', value: match ? `${match.name} (${match.who})` : '內部人' },
       { label: '轉讓方式', value: match?.how || '一般交易' },
       { label: '轉讓期間', value: match?.period || '—' },
@@ -135,7 +138,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({
       { label: '資料日期', value: dataset.pledgeDate || dataset.today },
     ];
     fullContentText = `董監事個人或法人持股設質比例已達 50% 以上。`;
-    extraExplanation = '💡 說明：質押比率高不代表一定有問題，但股價大跌時可能被追繳或面臨斷頭壓力，需留意流動性風險。';
+    extraExplanation = '💡 說明：質押比率高不代表一定有問題，但股價大跌時，質押的股票可能被要求補擔保品。';
   } else if (target.kind === 'pledgeUp') {
     const match = dataset.weekly.find((e) => e.c === target.code);
     tagText = '本週多押';
@@ -147,9 +150,28 @@ export const EventDetail: React.FC<EventDetailProps> = ({
       { label: '週資料日', value: dataset.weekDate || dataset.today },
     ];
     fullContentText = `董監事單週增加股票質押數量顯著。`;
-    extraExplanation = '💡 說明：內部人短時間大量增押股票可能反映資金調度需求，宜留意大股東財務狀態。';
+    extraExplanation = '💡 說明：代表董監事這週把更多股票拿去質押借款。原因可能是個人資金需求，也可能是其他安排，公開資料沒有說明。';
   } else {
     fullContentText = target.rawEvent?.x || target.title || '公開資訊紀錄';
+  }
+
+  // Determine specific data source label
+  let sourceText = '證交所／櫃買中心公開資訊觀測站';
+  if (target.kind === 'fined') {
+    const match = dataset.fines.find(
+      (f) => f.c === target.code && (!target.date || f.d === target.date)
+    );
+    sourceText = match?.src || '金管會證期局 / 證交所';
+  } else if (target.kind === 'control') {
+    sourceText = '證交所／櫃買中心 經營權異動公告';
+  } else if (target.kind === 'insider') {
+    sourceText = '公開資訊觀測站 內部人持股轉讓事前申報';
+  } else if (target.kind === 'disposal' || target.kind === 'trade') {
+    sourceText = '證交所／櫃買中心';
+  } else if (target.kind === 'pledgeHigh') {
+    sourceText = `公開資訊觀測站 董監事質權設定${dataset.pledgeDate ? `（資料日 ${dataset.pledgeDate}）` : ''}`;
+  } else if (target.kind === 'pledgeUp') {
+    sourceText = `集保結算所 設質交付週統計${dataset.weekDate ? `（資料日 ${dataset.weekDate}）` : ''}`;
   }
 
   // Get other events for this company (max 5)
@@ -160,7 +182,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({
 
   const handleGoToDiscuss = () => {
     try {
-      sessionStorage.setItem('prefill_discuss', `#${coName} (${target.code})`);
+      sessionStorage.setItem('prefill_company', target.code);
     } catch {}
     onNavigate('#feed');
     onClose();
@@ -284,7 +306,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({
 
         {/* Disclaimer Note */}
         <div className="note" style={{ marginTop: 16, textAlign: 'center', fontSize: 12 }}>
-          資料來源：證交所／櫃買中心公開資訊觀測站<br />
+          資料來源：{sourceText}<br />
           本站只整理公開資訊，不提供買賣建議。
         </div>
       </div>
