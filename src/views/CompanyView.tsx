@@ -240,7 +240,9 @@ export const CompanyView: React.FC<CompanyViewProps> = ({
             <>
               {diffItem.p[0] !== null && diffItem.p[1] !== null
                 ? `（質押比率 ${diffItem.p[0].toFixed(1)}% → ${diffItem.p[1].toFixed(1)}%）`
-                : `（開始/不再列入董監質押統計）`}
+                : diffItem.p[0] === null
+                ? `（開始列入董監質押統計：${diffItem.p[1]?.toFixed(1)}%）`
+                : `（不再列入董監質押統計，原 ${diffItem.p[0]?.toFixed(1)}%）`}
             </>
           )}
         </div>

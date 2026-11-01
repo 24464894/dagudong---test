@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Dataset, Company, DiffData, DiffItem } from '../types';
 import { TimelineRow } from '../components/TimelineRow';
 import { SearchNavIcon } from '../components/Icons';
-import { DEFAULT_WL } from '../constants';
+import { DEFAULT_WL, KIND, SIG } from '../constants';
 import { getTimelineBounds, getRecentCutoffDate, getCompanyEvents, calcXp, zhang, md } from '../utils';
 import { EventDetailTarget } from '../components/EventDetail';
 import { ExpandableList } from '../components/ExpandableList';
@@ -467,6 +467,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                         <a href={`#co-${i.c}`} className="ht" style={{ fontWeight: 800 }}>{i.n}</a>
                         <span className="mono muted">{i.c}</span>
+                        {i.chain === true && <span className="tag hi">新增連環訊號</span>}
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flex: 1, justifyContent: 'flex-end' }}>
                         {i.new?.map((s) => (
@@ -489,8 +490,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           <span className="note">
                             {i.p[0] !== null && i.p[1] !== null ? (
                               `董監質押 ${i.p[0].toFixed(1)}% → ${i.p[1].toFixed(1)}%`
+                            ) : i.p[0] === null ? (
+                              `開始列入董監質押統計：${i.p[1]?.toFixed(1)}%`
                             ) : (
-                              '開始/不再列入董監質押統計'
+                              `不再列入董監質押統計（原 ${i.p[0]?.toFixed(1)}%）`
                             )}
                           </span>
                         )}
@@ -508,8 +511,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {diff && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
                   {Object.entries(diff.summary).map(([k, v]) => (
-                    <div key={k} style={{ display: 'flex', gap: 6, fontSize: 13 }}>
-                      <span>{k}</span>
+                    <div key={k} className={`tag ${SIG[k]?.[1] || 'mid'}`} style={{ display: 'inline-flex', gap: 6, fontSize: 13, marginRight: 8, marginBottom: 8 }}>
+                      <span>{KIND[k]?.[0] || k}</span>
                       <b className="mono">{v}</b>
                     </div>
                   ))}
@@ -526,10 +529,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <span className="mono muted" style={{ fontSize: 12 }}>{i.c}</span>
                         {i.chain === true && <span className="tag hi">新增連環訊號</span>}
                       </div>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        {i.new?.filter(s => s.k !== 'chain').map(s => (
-                          <span key={s.k} className="tag" style={{ fontSize: 11 }}>{s.x}</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'flex-end' }}>
+                        {i.new?.map(s => (
+                          <button
+                            key={s.k + s.d + s.x}
+                            type="button"
+                            className="tag"
+                            style={{ fontSize: 11, cursor: 'pointer', border: 0 }}
+                            onClick={() => onSelectEvent?.({ code: i.c, kind: s.k as any, date: s.d })}
+                          >
+                            {s.x}
+                          </button>
                         ))}
+                        {i.p && (
+                          <span className="note" style={{ fontSize: 11 }}>
+                            {i.p[0] !== null && i.p[1] !== null ? (
+                              `${i.p[0].toFixed(1)}% → ${i.p[1].toFixed(1)}%`
+                            ) : i.p[0] === null ? (
+                              `開始列入：${i.p[1]?.toFixed(1)}%`
+                            ) : (
+                              `不再列入（原 ${i.p[0]?.toFixed(1)}%）`
+                            )}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
