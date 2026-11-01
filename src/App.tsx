@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Dataset, DailyContent } from './types';
-import { DATA_URL, CONTENT_URL } from './constants';
+import { Dataset, DailyContent, DiffData } from './types';
+import { DATA_URL, CONTENT_URL, DIFF_URL } from './constants';
 import { generatePosts } from './generatePosts';
 import { useAuth } from './context/AuthContext';
 import { isExactDefaultWl } from './utils';
@@ -33,6 +33,7 @@ export const App: React.FC = () => {
   const { showToast } = useToast();
 
   const [data, setData] = useState<Dataset | null>(null);
+  const [diff, setDiff] = useState<DiffData | null>(null);
   const [dailyContent, setDailyContent] = useState<DailyContent | null>(null);
   const [dailyLoading, setDailyLoading] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
@@ -87,15 +88,21 @@ export const App: React.FC = () => {
     setLoading(true);
     setError(null);
     let loadedData: Dataset | null = null;
+    let loadedDiff: DiffData | null = null;
 
     // 1. Try remote GitHub URL with cache-busting
     try {
-      const res = await fetch(`${DATA_URL}?t=${Date.now()}`, {
-        cache: 'no-store',
-      });
-      if (res.ok) {
-        loadedData = await res.json();
+      const [resData, resDiff] = await Promise.all([
+        fetch(`${DATA_URL}?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`${DIFF_URL}?t=${Date.now()}`, { cache: 'no-store' })
+      ]);
+      
+      if (resData.ok) {
+        loadedData = await resData.json();
         setIsUsingFallback(false);
+      }
+      if (resDiff.ok) {
+        loadedDiff = await resDiff.json();
       }
     } catch {
       // Remote fetch failed, fallback below
@@ -116,6 +123,7 @@ export const App: React.FC = () => {
 
     if (loadedData) {
       setData(loadedData);
+      setDiff(loadedDiff);
     } else {
       setError('資料載入失敗，請稍後再試。');
     }
@@ -480,6 +488,7 @@ export const App: React.FC = () => {
               <CompanyView
                 code={companyCode}
                 data={data}
+                diff={diff}
                 allPosts={allPosts}
                 watchlist={watchlist}
                 followList={followList}
@@ -502,6 +511,7 @@ export const App: React.FC = () => {
             ) : rawHash === 'dash' ? (
               <DashboardView
                 data={data}
+                diff={diff}
                 watchlist={watchlist}
                 isExampleWatchlist={isExampleWatchlist}
                 dailySummary={dailyContent?.summary}
@@ -539,6 +549,7 @@ export const App: React.FC = () => {
             ) : (
               <DashboardView
                 data={data}
+                diff={diff}
                 watchlist={watchlist}
                 isExampleWatchlist={isExampleWatchlist}
                 dailySummary={dailyContent?.summary}

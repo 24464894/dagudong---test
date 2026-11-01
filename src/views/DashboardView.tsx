@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Dataset, Company } from '../types';
+import { Dataset, Company, DiffData, DiffItem } from '../types';
 import { TimelineRow } from '../components/TimelineRow';
 import { SearchNavIcon } from '../components/Icons';
 import { DEFAULT_WL } from '../constants';
 import { getTimelineBounds, getRecentCutoffDate, getCompanyEvents, calcXp, zhang, md } from '../utils';
 import { EventDetailTarget } from '../components/EventDetail';
+import { ExpandableList } from '../components/ExpandableList';
 
 interface DashboardViewProps {
   data: Dataset;
+  diff: DiffData | null;
   watchlist: string[];
   isExampleWatchlist: boolean;
   dailySummary?: string;
@@ -18,6 +20,7 @@ interface DashboardViewProps {
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   data,
+  diff,
   watchlist,
   isExampleWatchlist,
   dailySummary,
@@ -27,6 +30,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const [addQuery, setAddQuery] = useState('');
   const [showExamplePreview, setShowExamplePreview] = useState(false);
+  const [activeTab, setActiveTab] = useState<'yesterday' | 'week'>('yesterday');
+  const [expandedBlocks, setExpandedBlocks] = useState<Record<string, boolean>>({});
+
   const { t0, span } = getTimelineBounds(data.today);
   const recentDate = getRecentCutoffDate(data.today);
 
@@ -58,7 +64,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     .filter((c) => c.k.length >= 2)
     .sort((a, b) => b.k.length - a.k.length || (b.p || 0) - (a.p || 0));
 
-  // Recent diff breakdown
+  // Recent diff breakdown (Weekly data)
   const outInsider: [string, string, string][] = [];
   data.insider.forEach((e) => outInsider.push([e.c, e.n, `${zhang(e.sell)} 張`]));
 
@@ -102,8 +108,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     if (showExamplePreview) setShowExamplePreview(false);
   };
 
-  const [expandedBlocks, setExpandedBlocks] = useState<Record<string, boolean>>({});
-
   const toggleBlock = (title: string) => {
     setExpandedBlocks((prev) => ({ ...prev, [title]: !prev[title] }));
   };
@@ -117,7 +121,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const displayedItems = isExpanded ? items : items.slice(0, 6);
 
     return (
-      <div>
+      <div key={title}>
         <h3>
           <span>{title}</span>
           <span className="mono muted">{items.length}</span>
@@ -129,11 +133,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <button
                   type="button"
                   className="ht"
-                  style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                   onClick={() => {
+                    const kindMap: Record<string, any> = {
+                      '大股東申報賣股': 'insider',
+                      '新的處置': 'disposal',
+                      '這週多押千張以上': 'pledgeUp',
+                      '這週贖回千張以上': 'pledgeUp', // Or pledgeDown if we had it mapped
+                      '新的罰款': 'fined'
+                    };
                     onSelectEvent?.({
                       code: c,
-                      kind: title === '大股東申報賣股' ? 'insider' : title === '新的處置' ? 'disposal' : title === '這週多押千張以上' ? 'pledgeUp' : 'fined',
+                      kind: kindMap[title] || 'insider',
                       date: '',
                     });
                   }}
@@ -150,7 +160,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <li className="muted">沒有</li>
           )}
           {items.length > 6 && (
-            <li>
+            <li style={{ borderBottom: 0 }}>
               <button type="button" className="ht" onClick={() => toggleBlock(title)}>
                 {isExpanded ? '收合' : `還有 ${items.length - 6} 筆`}
               </button>
@@ -198,8 +208,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       })()
     : '';
 
+  const diffItems = diff?.items || [];
+  const mineDiffs = diffItems.filter((i) => watchlist.includes(i.c));
+  const otherDiffs = diffItems.filter((i) => !watchlist.includes(i.c));
+
   return (
-    <>
+    <div>
       {dailySummary && firstSentence && (
         <div
           style={{
@@ -415,17 +429,123 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </section>
 
       <section className="sec">
-        <h2>最近一週多了什麼</h2>
-        <p className="sub">
-          全市場，{recentDate} 之後的新紀錄。每天跑抓資料程式後，這裡會變成「跟昨天比」。
-        </p>
-        <div className="diff">
-          {renderDiffBlock('大股東申報賣股', outInsider, 'var(--ink)')}
-          {renderDiffBlock('新的處置', outDisposal, 'var(--hi-fg)')}
-          {renderDiffBlock('這週多押千張以上', outPledgeUp, 'var(--hi-fg)')}
-          {renderDiffBlock('這週贖回千張以上', outPledgeDown, 'var(--mid)')}
-          {renderDiffBlock('新的罰款', outFined)}
-        </div>
+        <nav className="tabs" style={{ margin: '-18px -24px 18px', borderBottom: '1px solid var(--line)' }}>
+          <button
+            type="button"
+            aria-current={activeTab === 'yesterday' ? 'page' : undefined}
+            onClick={() => setActiveTab('yesterday')}
+          >
+            跟昨天比
+          </button>
+          <button
+            type="button"
+            aria-current={activeTab === 'week' ? 'page' : undefined}
+            onClick={() => setActiveTab('week')}
+          >
+            最近一週
+          </button>
+        </nav>
+
+        {activeTab === 'yesterday' ? (
+          <div>
+            <p className="note" style={{ marginBottom: 16 }}>
+              {diff ? (diff.prev ? `${diff.prev} → ${diff.date}` : `${diff.date}`) : '載入中...'}
+            </p>
+
+            {!diff?.prev && (
+              <div className="empty" style={{ background: 'var(--panel)', borderRadius: 12, marginBottom: 20 }}>
+                明天起會開始比對，先把想看的公司加進追蹤清單
+              </div>
+            )}
+
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 900, marginBottom: 10 }}>你追蹤的公司</h3>
+              {mineDiffs.length > 0 ? (
+                <div className="lst">
+                  {mineDiffs.map((i) => (
+                    <div key={i.c} style={{ alignItems: 'flex-start' }}>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <a href={`#co-${i.c}`} className="ht" style={{ fontWeight: 800 }}>{i.n}</a>
+                        <span className="mono muted">{i.c}</span>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flex: 1, justifyContent: 'flex-end' }}>
+                        {i.new?.map((s) => (
+                          <button
+                            key={s.k}
+                            type="button"
+                            className="tag hi"
+                            style={{ cursor: 'pointer', border: 0 }}
+                            onClick={() => onSelectEvent?.({ code: i.c, kind: s.k as any, date: '' })}
+                          >
+                            {s.x}
+                          </button>
+                        ))}
+                        {i.gone?.map((s) => (
+                          <span key={s} className="muted" style={{ fontSize: 13 }}>已結束：{s}</span>
+                        ))}
+                        {i.p && (
+                          <span className="note">
+                            董監質押 {i.p.from.toFixed(1)}% → {i.p.to.toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="empty" style={{ padding: '20px 0' }}>你追蹤的公司今天都沒有新變化</p>
+              )}
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: 15, fontWeight: 900, marginBottom: 10 }}>全市場</h3>
+              {diff && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+                  {Object.entries(diff.summary).map(([k, v]) => (
+                    <div key={k} style={{ display: 'flex', gap: 6, fontSize: 13 }}>
+                      <span>{k}</span>
+                      <b className="mono">{v}</b>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {otherDiffs.length > 0 && (
+                <ExpandableList
+                  items={otherDiffs}
+                  limit={10}
+                  renderItem={(i: DiffItem) => (
+                    <div key={i.c} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <a href={`#co-${i.c}`} className="ht">{i.n}</a>
+                        <span className="mono muted" style={{ fontSize: 12 }}>{i.c}</span>
+                        {i.new?.some(s => s.k === 'chain') && <span className="tag hi">新增連環訊號</span>}
+                      </div>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {i.new?.filter(s => s.k !== 'chain').map(s => (
+                          <span key={s.k} className="tag" style={{ fontSize: 11 }}>{s.x}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                />
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
+            <h2 style={{ fontSize: 17, fontWeight: 900, margin: 0 }}>最近一週多了什麼</h2>
+            <p className="sub" style={{ color: 'var(--muted)', fontSize: 13, margin: '2px 0 12px' }}>
+              全市場，{recentDate} 之後的新紀錄。
+            </p>
+            <div className="diff">
+              {renderDiffBlock('大股東申報賣股', outInsider, 'var(--ink)')}
+              {renderDiffBlock('新的處置', outDisposal, 'var(--hi-fg)')}
+              {renderDiffBlock('這週多押千張以上', outPledgeUp, 'var(--hi-fg)')}
+              {renderDiffBlock('這週贖回千張以上', outPledgeDown, 'var(--mid)')}
+              {renderDiffBlock('新的罰款', outFined)}
+            </div>
+          </>
+        )}
       </section>
 
       <section className="sec">
@@ -475,6 +595,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             />
           ))}
       </section>
-    </>
+    </div>
   );
 };

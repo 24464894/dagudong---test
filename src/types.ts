@@ -240,3 +240,19 @@ export interface DailyContent {
   summary: string;
   items: DailyItem[];
 }
+
+export interface DiffItem {
+  c: string;
+  n: string;
+  m: string;
+  new?: { k: string, x: string }[];
+  gone?: string[];
+  p?: { from: number, to: number };
+}
+
+export interface DiffData {
+  date: string;
+  prev: string | null;
+  items: DiffItem[];
+  summary: Record<string, number>;
+}

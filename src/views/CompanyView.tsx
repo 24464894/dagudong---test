@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dataset, FeedPost, DailyItem } from '../types';
+import { Dataset, FeedPost, DailyItem, DiffData } from '../types';
 import { KIND, SIG } from '../constants';
 import {
   IND,
@@ -8,6 +8,7 @@ import {
   isWithinWindow,
   getCompanyEvents,
   zhang,
+  downloadCSV,
 } from '../utils';
 import { FeedPostItem } from '../components/FeedPostItem';
 import { CommunityFeed } from '../components/CommunityFeed';
@@ -16,6 +17,7 @@ import { EventDetailTarget } from '../components/EventDetail';
 interface CompanyViewProps {
   code: string;
   data: Dataset;
+  diff: DiffData | null;
   allPosts: FeedPost[];
   watchlist: string[];
   followList: string[];
@@ -31,6 +33,7 @@ interface CompanyViewProps {
 export const CompanyView: React.FC<CompanyViewProps> = ({
   code,
   data,
+  diff,
   allPosts,
   watchlist,
   followList,
@@ -59,9 +62,10 @@ export const CompanyView: React.FC<CompanyViewProps> = ({
   const isFollowing = followList.includes(code);
   const events = getCompanyEvents(code, data);
   const weeklyItem = data.weekly.find((x) => x.c === code);
-  const controlItem = data.control.find((e) => e.c === code);
   const relatedPosts = allPosts.filter((p) => p.co.includes(code));
   const matchingDailyItems = dailyItems.filter((item) => item.c === code);
+
+  const diffItem = diff?.items.find((i) => i.c === code);
 
   const { t0, span } = getTimelineBounds(data.today);
 
@@ -171,6 +175,12 @@ export const CompanyView: React.FC<CompanyViewProps> = ({
     );
   };
 
+  const handleDownload = () => {
+    const headers = ['日期', '種類', '內容'];
+    const rows = events.map((e) => [e.d, KIND[e.k]?.[0] || e.k, e.x]);
+    downloadCSV(`${code}_${company.n}_訊號紀錄.csv`, [headers, ...rows]);
+  };
+
   return (
     <>
       <div className="dhead">
@@ -222,6 +232,13 @@ export const CompanyView: React.FC<CompanyViewProps> = ({
         </div>
       </div>
 
+      {diffItem && (
+        <div className="warn" style={{ margin: '14px 24px 0' }}>
+          跟昨天比：多了 {diffItem.new?.length || 0} 個訊號
+          {diffItem.p && `（質押比率異動）`}
+        </div>
+      )}
+
       <section className="sec">
         <div className="kv">
           <div>
@@ -248,7 +265,12 @@ export const CompanyView: React.FC<CompanyViewProps> = ({
       </section>
 
       <section className="sec">
-        <h2>過去 12 個月</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+          <h2>過去 12 個月</h2>
+          <button type="button" className="ht" onClick={handleDownload}>
+            下載 CSV
+          </button>
+        </div>
         <p className="sub">每種紀錄一條線，最右邊是今天。</p>
         <div className="lane" style={{ fontSize: 11, color: 'var(--muted)' }}>
           <span />
@@ -444,12 +466,6 @@ export const CompanyView: React.FC<CompanyViewProps> = ({
             </li>
           )}
         </ul>
-
-        {controlItem && (
-          <p className="note" style={{ marginTop: 12 }}>
-            經營權異動原文：{controlItem.x}
-          </p>
-        )}
       </section>
 
       {/* Real-time community discussion for this company */}

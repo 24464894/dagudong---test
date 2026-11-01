@@ -4,6 +4,7 @@ import { Dataset, FeedPost, Company } from '../types';
 import { SIG } from '../constants';
 import { useToast } from '../components/Toast';
 import { FeedPostItem } from '../components/FeedPostItem';
+import { IND, downloadCSV } from '../utils';
 
 interface ProfileViewProps {
   data: Dataset;
@@ -96,7 +97,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
-  // Move stock up/down
   const moveStock = (index: number, direction: 'up' | 'down') => {
     if (!profile) return;
     const current = [...profile.watchlist];
@@ -109,7 +109,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     onReorderWatchlist(current);
   };
 
-  // Toggle signal notification
   const handleToggleSignal = async (sigKey: string) => {
     if (!profile) return;
     const currentSignals = profile.notify.signals || [];
@@ -135,7 +134,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     showToast(newEmail ? '已開啟 Email 晨報' : '已關閉 Email 晨報');
   };
 
-  // Not logged in view
+  const trackedCompanies = profile?.watchlist
+    .map((code) => data.cos.find((c) => c.c === code))
+    .filter((c): c is Company => Boolean(c)) || [];
+
+  const userSavedPosts = allPosts.filter((p) => savedPosts.includes(p.id));
+
+  const handleDownloadWatchlist = () => {
+    const headers = ['代號', '名稱', '市場', '產業', '董監質押%', '累積訊號數'];
+    const rows = trackedCompanies.map((c) => [
+      c.c,
+      c.n,
+      c.m,
+      IND(c),
+      c.p != null ? `${c.p.toFixed(2)}%` : '—',
+      String(c.k.length),
+    ]);
+    downloadCSV(`我的追蹤清單_${new Date().toISOString().slice(0, 10)}.csv`, [headers, ...rows]);
+  };
+
   if (!user || !profile) {
     return (
       <>
@@ -178,12 +195,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     );
   }
 
-  const trackedCompanies = profile.watchlist
-    .map((code) => data.cos.find((c) => c.c === code))
-    .filter((c): c is Company => Boolean(c));
-
-  const userSavedPosts = allPosts.filter((p) => savedPosts.includes(p.id));
-
   return (
     <>
       <div className="dhead">
@@ -225,7 +236,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </button>
       </div>
 
-      {/* Profile Subtabs (SPEC 6.6) */}
       <nav className="tabs">
         <button
           type="button"
@@ -264,10 +274,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </button>
       </nav>
 
-      {/* Tab 1: Watchlist */}
       {activeTab === 'watchlist' && (
         <section className="sec">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
             <div>
               <h2>追蹤清單排序與管理</h2>
               <p className="sub">
@@ -279,9 +288,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 )}
               </p>
             </div>
-            <a href="#dash" className="ht" style={{ fontSize: 13, fontWeight: 700 }}>
-              查看 12 個月時間軸 →
-            </a>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <button type="button" className="ht" onClick={handleDownloadWatchlist} style={{ fontSize: 13 }}>
+                下載 CSV
+              </button>
+              <a href="#dash" className="ht" style={{ fontSize: 13, fontWeight: 700 }}>
+                查看 12 個月時間軸 →
+              </a>
+            </div>
           </div>
 
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -308,7 +322,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   >
                     {c.n} <span className="mono muted">{c.c}</span>
                   </a>
-                  <span className="note">
+                  <span className="note hide-m">
                     {c.m}·{c.p != null ? `質押 ${c.p.toFixed(1)}%` : ''}
                   </span>
                 </div>
@@ -352,7 +366,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </section>
       )}
 
-      {/* Tab 2: Saved */}
       {activeTab === 'saved' && (
         <>
           <section className="sec">
@@ -375,7 +388,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </>
       )}
 
-      {/* Tab 3: Notify Settings */}
       {activeTab === 'notify' && (
         <section className="sec">
           <h2>通知管道與頻率</h2>
@@ -442,7 +454,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </section>
       )}
 
-      {/* Tab 4: Plan */}
       {activeTab === 'plan' && (
         <section className="sec">
           <h2>方案比較與升級</h2>
@@ -456,7 +467,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               marginTop: 16,
             }}
           >
-            {/* Free Tier */}
             <div
               style={{
                 border: '1px solid var(--line)',
@@ -477,13 +487,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <li>全市場公開雷達與時間軸</li>
                 <li>討論區閱讀與發布觀點</li>
                 <li>每日重大異動整理</li>
+                <li>「跟昨天比」每日自選股異動差額比對</li>
+                <li>CSV 數據下載功能</li>
               </ul>
               <button type="button" className="btn line" disabled style={{ width: '100%' }}>
                 已在方案中
               </button>
             </div>
 
-            {/* Pro Tier */}
             <div
               style={{
                 border: '2px solid var(--hl)',
@@ -502,7 +513,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <ul style={{ paddingLeft: 18, lineHeight: 1.8, fontSize: 14, margin: '14px 0 20px' }}>
                 <li><b>追蹤清單擴增至 100 家</b></li>
                 <li>大股東申報與經營權異動即時推播（LINE/Email）</li>
-                <li>「跟昨天比」每日自選股異動差額比對</li>
                 <li>歷史歷年質押與裁罰趨勢數據下載</li>
               </ul>
               <button
@@ -519,7 +529,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </section>
       )}
 
-      {/* Tab 5: Account */}
       {activeTab === 'account' && (
         <section className="sec" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -529,7 +538,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </a>
           </div>
 
-          {/* Privacy Settings: Show Watchlist */}
           <div className="setrow" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'var(--panel)', borderRadius: 12 }}>
             <div>
               <b style={{ fontSize: 14 }}>公開我的追蹤清單</b>
@@ -547,7 +555,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </label>
           </div>
 
-          {/* Profile Edit Section */}
           <div style={{ padding: '16px', background: 'var(--panel)', borderRadius: 12, border: '1px solid var(--line)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <b style={{ fontSize: 14 }}>個人資料設定</b>

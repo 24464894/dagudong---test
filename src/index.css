@@ -1463,6 +1463,26 @@ body::before {
   justify-content: center;
 }
 
+button.ht {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  color: var(--mid);
+  font-weight: 700;
+  font-size: 13px;
+  text-align: left;
+}
+
+button.ht:hover {
+  text-decoration: underline;
+}
+
+button.ht:focus-visible {
+  outline: 2px solid var(--mid);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 @media (max-width: 640px) {
   .event-panel {
     top: auto;

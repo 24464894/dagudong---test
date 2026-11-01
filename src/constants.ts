@@ -1,5 +1,6 @@
 export const DATA_URL = 'https://raw.githubusercontent.com/24464894/dagudong/main/data.json';
 export const CONTENT_URL = 'https://raw.githubusercontent.com/24464894/dagudong/main/content.json';
+export const DIFF_URL = 'https://raw.githubusercontent.com/24464894/dagudong/main/diff.json';
 export const HISTORY_CONTENT_URL = 'https://raw.githubusercontent.com/24464894/dagudong/main/history/content-';
 
 export const SIG: Record<string, [string, string]> = {
