@@ -1405,3 +1405,76 @@ body::before {
 .switch input:checked+span{background:var(--ink)}
 .switch input:checked+span::after{transform:translateX(18px)}
 .switch input:focus-visible+span{outline:2px solid var(--mid);outline-offset:2px}
+
+/* 事件詳情側邊面板 / Bottom Sheet */
+.event-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 380px;
+  max-width: 90vw;
+  background: var(--bg);
+  border-left: 1px solid var(--line);
+  box-shadow: -4px 0 24px rgba(0,0,0,0.18);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  overflow-y: auto;
+  outline: none;
+}
+
+.event-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.event-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 10px;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.event-content {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink);
+  margin-top: 12px;
+}
+
+.event-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.event-actions .btn {
+  flex: 1;
+  min-height: 38px;
+  padding: 0 10px;
+  font-size: 13px;
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .event-panel {
+    top: auto;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 80vh;
+    border-left: none;
+    border-top: 1px solid var(--line);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.25);
+  }
+}

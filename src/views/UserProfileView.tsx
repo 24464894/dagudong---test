@@ -358,7 +358,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {!isSelf && !publicProfile.showWatchlist ? (
             <div className="empty" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-              <LockIcon className="w-8 h-8 text-slate-500" />
+              <LockIcon style={{ width: 32, height: 32, color: 'var(--muted)' }} />
               <span>該用戶未公開追蹤清單</span>
             </div>
           ) : !publicProfile.watchlist || publicProfile.watchlist.length === 0 ? (

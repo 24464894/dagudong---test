@@ -11,7 +11,7 @@ import {
 } from '../utils';
 import { FeedPostItem } from '../components/FeedPostItem';
 import { CommunityFeed } from '../components/CommunityFeed';
-import { useToast } from '../components/Toast';
+import { EventDetailTarget } from '../components/EventDetail';
 
 interface CompanyViewProps {
   code: string;
@@ -25,6 +25,7 @@ interface CompanyViewProps {
   onToggleFollow: (code: string) => void;
   onToggleSavePost: (id: string) => void;
   onBack: () => void;
+  onSelectEvent?: (target: EventDetailTarget) => void;
 }
 
 export const CompanyView: React.FC<CompanyViewProps> = ({
@@ -39,8 +40,8 @@ export const CompanyView: React.FC<CompanyViewProps> = ({
   onToggleFollow,
   onToggleSavePost,
   onBack,
+  onSelectEvent,
 }) => {
-  const { showToast } = useToast();
   const company = data.cos.find((c) => c.c === code);
 
   if (!company) {
@@ -86,6 +87,18 @@ export const CompanyView: React.FC<CompanyViewProps> = ({
     'trade',
   ];
 
+  const handleTriggerEvent = (eItem: any) => {
+    if (onSelectEvent) {
+      onSelectEvent({
+        code,
+        kind: eItem.k,
+        date: eItem.d,
+        title: eItem.x,
+        rawEvent: eItem,
+      });
+    }
+  };
+
   const renderLaneTrack = (laneKey: 'insider' | 'control' | 'pledgeUp' | 'disposal' | 'fined' | 'trade') => {
     const laneEvents = events.filter((e) => e.k === laneKey);
     const earlyLaneEvents = laneEvents.filter((e) => !isWithinWindow(e.d, t0) && !e.to);
@@ -100,7 +113,8 @@ export const CompanyView: React.FC<CompanyViewProps> = ({
           <span
             className="early"
             title={earlyLaneEvents.map((e) => `${e.d} ${e.x}`).join('\n')}
-            onClick={() => showToast(`${earlyLaneEvents[0].d} ${earlyLaneEvents[0].x}`)}
+            onClick={() => handleTriggerEvent(earlyLaneEvents[0])}
+            style={{ cursor: 'pointer' }}
           >
             ◀ {earlyLaneEvents[0].d.slice(0, 4)} {KIND[laneKey]?.[0]}
           </span>
@@ -121,7 +135,7 @@ export const CompanyView: React.FC<CompanyViewProps> = ({
                   style={{ left: `${a}%`, width: `${widthPct}%` }}
                   title={e.x}
                   aria-label={e.x}
-                  onClick={() => showToast(e.x)}
+                  onClick={() => handleTriggerEvent(e)}
                 />
                 {e.k === 'insider' && (
                   <button
@@ -130,7 +144,7 @@ export const CompanyView: React.FC<CompanyViewProps> = ({
                     style={{ left: `${calcXp(e.d, t0, span)}%` }}
                     title={`${e.d} ${e.x}`}
                     aria-label={e.x}
-                    onClick={() => showToast(`${e.d} ${e.x}`)}
+                    onClick={() => handleTriggerEvent(e)}
                   />
                 )}
               </React.Fragment>
@@ -147,7 +161,7 @@ export const CompanyView: React.FC<CompanyViewProps> = ({
               style={{ left: `${calcXp(e.d, t0, span)}%` }}
               title={`${e.d} ${e.x}`}
               aria-label={`${e.d} ${e.x}`}
-              onClick={() => showToast(`${e.d} ${e.x}`)}
+              onClick={() => handleTriggerEvent(e)}
             />
           );
         })}

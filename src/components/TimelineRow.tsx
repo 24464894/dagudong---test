@@ -2,7 +2,7 @@ import React from 'react';
 import { Company, Dataset } from '../types';
 import { KIND } from '../constants';
 import { IND, calcXp, isWithinWindow, getRecentCutoffDate, getCompanyEvents } from '../utils';
-import { useToast } from './Toast';
+import { EventDetailTarget } from './EventDetail';
 
 interface TimelineRowProps {
   company: Company;
@@ -11,6 +11,7 @@ interface TimelineRowProps {
   span: number;
   removable?: boolean;
   onRemove?: (code: string) => void;
+  onSelectEvent?: (target: EventDetailTarget) => void;
 }
 
 export const TimelineRow: React.FC<TimelineRowProps> = ({
@@ -20,8 +21,8 @@ export const TimelineRow: React.FC<TimelineRowProps> = ({
   span,
   removable = false,
   onRemove,
+  onSelectEvent,
 }) => {
-  const { showToast } = useToast();
   const events = getCompanyEvents(company.c, data);
   const recentDate = getRecentCutoffDate(data.today);
   const isFresh = events.some((e) => e.d >= recentDate);
@@ -35,6 +36,18 @@ export const TimelineRow: React.FC<TimelineRowProps> = ({
   }
 
   const earlyEvents = events.filter((e) => !isWithinWindow(e.d, t0) && !e.to);
+
+  const handleTriggerEvent = (eItem: any) => {
+    if (onSelectEvent) {
+      onSelectEvent({
+        code: company.c,
+        kind: eItem.k,
+        date: eItem.d,
+        title: eItem.x,
+        rawEvent: eItem,
+      });
+    }
+  };
 
   return (
     <div className={`tl-row ${isFresh ? 'new' : ''}`}>
@@ -63,7 +76,8 @@ export const TimelineRow: React.FC<TimelineRowProps> = ({
           <span
             className="early"
             title={earlyEvents.map((e) => `${e.d} ${e.x}`).join('\n')}
-            onClick={() => showToast(`${earlyEvents[0].d} ${earlyEvents[0].x}`)}
+            onClick={() => handleTriggerEvent(earlyEvents[0])}
+            style={{ cursor: 'pointer' }}
           >
             ◀ {earlyEvents[0].d.slice(0, 4)} {KIND[earlyEvents[0].k]?.[0] || earlyEvents[0].k}
           </span>
@@ -84,7 +98,7 @@ export const TimelineRow: React.FC<TimelineRowProps> = ({
                   style={{ left: `${a}%`, width: `${widthPct}%` }}
                   title={e.x}
                   aria-label={e.x}
-                  onClick={() => showToast(e.x)}
+                  onClick={() => handleTriggerEvent(e)}
                 />
                 {e.k === 'insider' && (
                   <button
@@ -93,7 +107,7 @@ export const TimelineRow: React.FC<TimelineRowProps> = ({
                     style={{ left: `${calcXp(e.d, t0, span)}%` }}
                     title={`${e.d} ${e.x}`}
                     aria-label={e.x}
-                    onClick={() => showToast(`${e.d} ${e.x}`)}
+                    onClick={() => handleTriggerEvent(e)}
                   />
                 )}
               </React.Fragment>
@@ -110,7 +124,7 @@ export const TimelineRow: React.FC<TimelineRowProps> = ({
               style={{ left: `${calcXp(e.d, t0, span)}%` }}
               title={`${e.d} ${e.x}`}
               aria-label={`${e.d} ${e.x}`}
-              onClick={() => showToast(`${e.d} ${e.x}`)}
+              onClick={() => handleTriggerEvent(e)}
             />
           );
         })}

@@ -15,6 +15,7 @@ import {
 import { RightSidebar } from './components/RightSidebar';
 import { Footer } from './components/Footer';
 import { useToast } from './components/Toast';
+import { EventDetail, EventDetailTarget } from './components/EventDetail';
 import { DashboardView } from './views/DashboardView';
 import { DailyView } from './views/DailyView';
 import { RadarView } from './views/RadarView';
@@ -37,6 +38,7 @@ export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUsingFallback, setIsUsingFallback] = useState(false);
+  const [selectedEventTarget, setSelectedEventTarget] = useState<EventDetailTarget | null>(null);
 
   // Hash state
   const [currentHash, setCurrentHash] = useState<string>(
@@ -487,6 +489,7 @@ export const App: React.FC = () => {
                 onToggleFollow={handleToggleFollow}
                 onToggleSavePost={handleToggleSavePost}
                 onBack={handleBack}
+                onSelectEvent={setSelectedEventTarget}
               />
             ) : isDailyPage ? (
               <DailyView
@@ -504,6 +507,7 @@ export const App: React.FC = () => {
                 dailySummary={dailyContent?.summary}
                 onAddWatchlist={handleAddWatchlist}
                 onRemoveWatchlist={handleRemoveWatchlist}
+                onSelectEvent={setSelectedEventTarget}
               />
             ) : rawHash === 'radar' ? (
               <RadarView data={data} />
@@ -540,6 +544,7 @@ export const App: React.FC = () => {
                 dailySummary={dailyContent?.summary}
                 onAddWatchlist={handleAddWatchlist}
                 onRemoveWatchlist={handleRemoveWatchlist}
+                onSelectEvent={setSelectedEventTarget}
               />
             )}
           </div>
@@ -550,6 +555,21 @@ export const App: React.FC = () => {
         {/* Right Desktop Sidebar (shown on feed and search views) */}
         {!isWideLayout && <RightSidebar data={data} followList={followList} />}
       </div>
+
+      {/* Event Detail Slide-over Panel / Bottom Sheet */}
+      {selectedEventTarget && data && (
+        <EventDetail
+          target={selectedEventTarget}
+          dataset={data}
+          watchlist={watchlist}
+          onClose={() => setSelectedEventTarget(null)}
+          onNavigate={(h) => {
+            window.location.hash = h;
+          }}
+          onToggleWatchlist={handleToggleWatchlist}
+          onSelectEvent={setSelectedEventTarget}
+        />
+      )}
 
       {/* Mobile Bottom Navigation Bar (6 tabs) */}
       <nav className="mbar" id="mbar">

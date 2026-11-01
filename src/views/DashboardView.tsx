@@ -4,6 +4,7 @@ import { TimelineRow } from '../components/TimelineRow';
 import { SearchNavIcon } from '../components/Icons';
 import { DEFAULT_WL } from '../constants';
 import { getTimelineBounds, getRecentCutoffDate, getCompanyEvents, calcXp, zhang, md } from '../utils';
+import { EventDetailTarget } from '../components/EventDetail';
 
 interface DashboardViewProps {
   data: Dataset;
@@ -12,6 +13,7 @@ interface DashboardViewProps {
   dailySummary?: string;
   onAddWatchlist: (code: string) => void;
   onRemoveWatchlist: (code: string) => void;
+  onSelectEvent?: (target: EventDetailTarget) => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -21,6 +23,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   dailySummary,
   onAddWatchlist,
   onRemoveWatchlist,
+  onSelectEvent,
 }) => {
   const [addQuery, setAddQuery] = useState('');
   const [showExamplePreview, setShowExamplePreview] = useState(false);
@@ -336,6 +339,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   span={span}
                   removable={!isPreviewing}
                   onRemove={onRemoveWatchlist}
+                  onSelectEvent={onSelectEvent}
                 />
               ))}
           </>
