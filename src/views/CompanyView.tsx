@@ -427,7 +427,7 @@ export const CompanyView: React.FC<CompanyViewProps> = ({
                   : 'mid';
 
               return (
-                <li key={idx}>
+                <li key={idx} onClick={() => handleTriggerEvent(e)} style={{ cursor: 'pointer' }}>
                   <span className="mono muted">{e.d}</span>
                   <span>
                     <span className={`tag ${tagClass}`}>{KIND[e.k]?.[0]}</span>

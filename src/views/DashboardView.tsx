@@ -442,6 +442,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               t0={t0}
               span={span}
               removable={false}
+              onSelectEvent={onSelectEvent}
             />
           ))}
       </section>

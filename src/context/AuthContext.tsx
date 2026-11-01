@@ -174,7 +174,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             const publicSnap = await getDoc(profileDocRef);
             const joinedDate = new Date().toISOString().split('T')[0];
-            if (!publicSnap.exists()) {
+            // Clean up old document if exists
+            if (publicSnap.exists()) {
+              const oldData = publicSnap.data();
+              // Check if there are keys outside of our allowed list (plus potentially some old fields we want to purge)
+              const allowedKeys = ['uid', 'name', 'photo', 'bio', 'joinedAt', 'showWatchlist', 'watchlist', 'postCount', 'likeCount'];
+              const hasInvalidFields = Object.keys(oldData).some(key => !allowedKeys.includes(key));
+              
+              if (hasInvalidFields) {
+                // Purge invalid fields by rewriting only with valid ones
+                await setDoc(profileDocRef, {
+                  uid: firebaseUser.uid,
+                  name: finalProfile.displayName,
+                  photo: finalProfile.photoURL,
+                  bio: finalProfile.bio || '',
+                  joinedAt: oldData.joinedAt || joinedDate,
+                  showWatchlist: finalProfile.showWatchlist ?? false,
+                  watchlist: (finalProfile.watchlist || []).slice(0, 50),
+                  postCount: oldData.postCount || 0,
+                  likeCount: oldData.likeCount || 0,
+                });
+              } else {
+                await updateDoc(profileDocRef, {
+                  name: finalProfile.displayName,
+                  photo: finalProfile.photoURL,
+                  watchlist: (finalProfile.watchlist || []).slice(0, 50),
+                  bio: finalProfile.bio || '',
+                  showWatchlist: finalProfile.showWatchlist ?? false,
+                });
+              }
+            } else {
               await setDoc(profileDocRef, {
                 uid: firebaseUser.uid,
                 name: finalProfile.displayName,
@@ -182,17 +211,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 bio: finalProfile.bio || '',
                 joinedAt: joinedDate,
                 showWatchlist: finalProfile.showWatchlist ?? false,
-                watchlist: finalProfile.watchlist,
+                watchlist: (finalProfile.watchlist || []).slice(0, 50),
                 postCount: 0,
                 likeCount: 0,
-              });
-            } else {
-              await updateDoc(profileDocRef, {
-                name: finalProfile.displayName,
-                photo: finalProfile.photoURL,
-                watchlist: finalProfile.watchlist,
-                bio: finalProfile.bio || '',
-                showWatchlist: finalProfile.showWatchlist ?? false,
               });
             }
           } catch (pErr) {

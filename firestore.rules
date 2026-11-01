@@ -163,7 +163,8 @@ service cloud.firestore {
     match /profiles/{userId} {
       allow read: if true;
       allow create: if isNotBanned() && isOwner(userId) &&
-        incoming().keys().hasOnly(['name', 'photo', 'bio', 'joinedAt', 'showWatchlist', 'watchlist', 'postCount', 'likeCount']) &&
+        incoming().keys().hasOnly(['uid', 'name', 'photo', 'bio', 'joinedAt', 'showWatchlist', 'watchlist', 'postCount', 'likeCount']) &&
+        incoming().get('uid', userId) == userId &&
         incoming().name is string && incoming().name.size() >= 1 && incoming().name.size() <= 30 &&
         (isAdmin() || incoming().name != '大股東在幹嘛') &&
         incoming().get('bio', '') is string && incoming().get('bio', '').size() <= 60 &&
@@ -173,7 +174,8 @@ service cloud.firestore {
 
       allow update: if isAdmin() || (
         isNotBanned() && isOwner(userId) &&
-        incoming().keys().hasOnly(['name', 'photo', 'bio', 'joinedAt', 'showWatchlist', 'watchlist', 'postCount', 'likeCount']) &&
+        incoming().keys().hasOnly(['uid', 'name', 'photo', 'bio', 'joinedAt', 'showWatchlist', 'watchlist', 'postCount', 'likeCount']) &&
+        incoming().get('uid', userId) == userId &&
         incoming().name is string && incoming().name.size() >= 1 && incoming().name.size() <= 30 &&
         (isAdmin() || incoming().name != '大股東在幹嘛') &&
         incoming().get('bio', '') is string && incoming().get('bio', '').size() <= 60 &&
